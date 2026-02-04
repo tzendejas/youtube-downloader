@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>YouTube Downloader</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #0f0f0f;
+            color: white;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        h1 {
+            color: #FF0000;
+            font-size: 28px;
+            margin-bottom: 5px;
+        }
+        .subtitle {
+            color: #888;
+            font-size: 14px;
+        }
+        .input-group {
+            margin-bottom: 15px;
+        }
+        input {
+            width: 100%;
+            padding: 16px;
+            font-size: 16px;
+            border: 2px solid #333;
+            border-radius: 10px;
+            background: #1a1a1a;
+            color: white;
+            outline: none;
+        }
+        input:focus {
+            border-color: #FF0000;
+        }
+        .quality-selector {
+            margin: 15px 0;
+        }
+        select {
+            width: 100%;
+            padding: 14px;
+            font-size: 16px;
+            border: 2px solid #333;
+            border-radius: 10px;
+            background: #1a1a1a;
+            color: white;
+            outline: none;
+        }
+        select:focus {
+            border-color: #FF0000;
+        }
+        button {
+            width: 100%;
+            padding: 18px;
+            background: linear-gradient(135deg, #FF0000, #CC0000);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        button:active {
+            transform: scale(0.98);
+        }
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 10px;
+            background: #1a1a1a;
+            display: none;
+        }
+        .success {
+            border-left: 5px solid #00FF00;
+        }
+        .error {
+            border-left: 5px solid #FF0000;
+        }
+        .server-status {
+            text-align: center;
+            margin-top: 30px;
+            padding: 15px;
+            background: #1a1a1a;
+            border-radius: 10px;
+            font-size: 14px;
+            color: #888;
+        }
+        .server-online {
+            color: #00FF00;
+        }
+        .server-offline {
+            color: #FF0000;
+        }
+        .instructions {
+            background: #1a1a1a;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            font-size: 14px;
+            color: #aaa;
+        }
+        .quality-option {
+            display: flex;
+            align-items: center;
+            padding: 8px 0;
+        }
+        .quality-icon {
+            margin-right: 10px;
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📱 YouTube Downloader</h1>
+            <div class="subtitle">Download videos on your phone</div>
+        </div>
+        
+        <div class="input-group">
+            <input type="text" id="videoUrl" 
+                   placeholder="Paste YouTube link here..." 
+                   autocomplete="off">
+        </div>
+        
+        <div class="quality-selector">
+            <select id="quality">
+                <option value="best">
+                    <div class="quality-option">
+                        <span class="quality-icon">🎬</span>
+                        Best Quality (MP4)
+                    </div>
+                </option>
+                <option value="1080">
+                    <div class="quality-option">
+                        <span class="quality-icon">📺</span>
+                        1080p HD
+                    </div>
+                </option>
+                <option value="720">
+                    <div class="quality-option">
+                        <span class="quality-icon">📱</span>
+                        720p HD
+                    </div>
+                </option>
+                <option value="480">
+                    <div class="quality-option">
+                        <span class="quality-icon">📹</span>
+                        480p
+                    </div>
+                </option>
+                <option value="360">
+                    <div class="quality-option">
+                        <span class="quality-icon">📼</span>
+                        360p
+                    </div>
+                </option>
+            </select>
+        </div>
+        
+        <button id="downloadBtn">⬇️ Download Video</button>
+        
+        <div id="result" class="result"></div>
+        
+        <div class="instructions">
+            <strong>How to use:</strong><br>
+            1. Copy YouTube video URL<br>
+            2. Paste above<br>
+            3. Choose quality<br>
+            4. Click download<br>
+            5. Save video to phone
+        </div>
+        
+        <div class="server-status">
+            Server: <span id="serverStatus" class="server-online">✅ Online</span><br>
+            <small id="serverIp">IP: 10.0.0.145:3001</small>
+        </div>
+    </div>
+
+    <script>
+        // === CONFIGURATION ===
+        // For local network (your computer must be on):
+        const SERVER_IP = '10.0.0.145';
+        const SERVER_PORT = '3001';
+        const SERVER_URL = `http://${SERVER_IP}:${SERVER_PORT}`;
+        
+        // For Render.com cloud (uncomment when deployed):
+        // const SERVER_URL = 'https://your-app-name.onrender.com';
+        
+        // === ELEMENTS ===
+        const downloadBtn = document.getElementById('downloadBtn');
+        const videoUrlInput = document.getElementById('videoUrl');
+        const qualitySelect = document.getElementById('quality');
+        const resultDiv = document.getElementById('result');
+        const serverStatus = document.getElementById('serverStatus');
+        const serverIp = document.getElementById('serverIp');
+        
+        // Update IP display
+        serverIp.textContent = `IP: ${SERVER_IP}:${SERVER_PORT}`;
+        
+        // === FUNCTIONS ===
+        
+        // Check server status
+        async function checkServer() {
+            try {
+                const response = await fetch(`${SERVER_URL}/health`, { 
+                    method: 'GET',
+                    timeout: 3000 
+                });
+                if (response.ok) {
+                    serverStatus.textContent = '✅ Online';
+                    serverStatus.className = 'server-online';
+                    return true;
+                }
+            } catch (error) {
+                serverStatus.textContent = '❌ Offline';
+                serverStatus.className = 'server-offline';
+            }
+            return false;
+        }
+        
+        // Extract video ID from URL
+        function extractVideoId(url) {
+            const patterns = [
+                /v=([a-zA-Z0-9_-]{11})/,           // youtube.com/watch?v=ID
+                /youtu\.be\/([a-zA-Z0-9_-]{11})/,  // youtu.be/ID
+                /embed\/([a-zA-Z0-9_-]{11})/,      // youtube.com/embed/ID
+                /\/shorts\/([a-zA-Z0-9_-]{11})/    // youtube.com/shorts/ID
+            ];
+            
+            for (const pattern of patterns) {
+                const match = url.match(pattern);
+                if (match) return match[1];
+            }
+            return null;
+        }
+        
+        // Download video - MAIN FUNCTION
+        async function downloadVideo() {
+            const url = videoUrlInput.value.trim();
+            
+            if (!url) {
+                showResult('Please enter a YouTube URL', 'error');
+                return;
+            }
+            
+            const videoId = extractVideoId(url);
+            
+            if (!videoId) {
+                showResult('Invalid YouTube URL. Check the link and try again.', 'error');
+                return;
+            }
+            
+            const quality = qualitySelect.value;
+            
+            // Check server first
+            if (!await checkServer()) {
+                showResult('Server offline. Make sure:<br>1. Computer is on<br>2. Server is running<br>3. Same WiFi network', 'error');
+                return;
+            }
+            
+            // Start download
+            downloadBtn.disabled = true;
+            downloadBtn.innerHTML = '⏳ Processing...';
+            
+            try {
+                const response = await fetch(`${SERVER_URL}/download`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        videoId: videoId,
+                        quality: quality  // THIS SENDS QUALITY TO SERVER
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success && data.downloadUrl) {
+                    showResult(`✅ <strong>Ready to download!</strong><br><br>
+                               <strong>Quality:</strong> ${data.quality || quality}<br>
+                               <strong>Size:</strong> ${data.size || 'Best available'}<br><br>
+                               <button onclick="startDownload('${data.downloadUrl}', '${data.title || videoId}')" 
+                                       style="width:100%; padding:15px; background:#00AA00; color:white; border:none; border-radius:8px; font-size:16px">
+                                 ⬇️ Tap to Download
+                               </button>`, 'success');
+                } else {
+                    // Fallback to y2mate
+                    showResult(`⚠️ Using backup service...<br><br>
+                               <a href="${data.fallback || `https://y2mate.is/youtube/${videoId}`}" 
+                                  target="_blank"
+                                  style="color:#FF0000; text-decoration:underline; font-weight:bold">
+                                 Tap here for y2mate (no quality selection)
+                               </a>`, 'error');
+                }
+                
+            } catch (error) {
+                console.error('Download error:', error);
+                showResult(`❌ Connection error<br><br>
+                           <a href="https://y2mate.is/youtube/${videoId}" 
+                              target="_blank"
+                              style="color:#FF0000; text-decoration:underline; font-weight:bold">
+                             Try y2mate.is (works anywhere)
+                           </a>`, 'error');
+            } finally {
+                downloadBtn.disabled = false;
+                downloadBtn.innerHTML = '⬇️ Download Video';
+            }
+        }
+        
+        // Helper functions
+        function showResult(message, type) {
+            resultDiv.innerHTML = message;
+            resultDiv.className = `result ${type}`;
+            resultDiv.style.display = 'block';
+            resultDiv.scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        function startDownload(url, title) {
+            // Open download in new tab (works on mobile)
+            window.open(url, '_blank');
+            
+            // Alternative: Direct download (may not work on mobile)
+            /*
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `${title}.mp4`.replace(/[<>:"/\\|?*]/g, '');
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            */
+        }
+        
+        // === EVENT LISTENERS ===
+        downloadBtn.addEventListener('click', downloadVideo);
+        
+        videoUrlInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') downloadVideo();
+        });
+        
+        // Auto-focus input on mobile
+        videoUrlInput.focus();
+        
+        // Auto-download when pasting YouTube link
+        videoUrlInput.addEventListener('paste', (e) => {
+            setTimeout(() => {
+                if (videoUrlInput.value.includes('youtu')) {
+                    downloadVideo();
+                }
+            }, 100);
+        });
+        
+        // Check server on load
+        checkServer();
+        
+        // Check every 30 seconds
+        setInterval(checkServer, 30000);
+    </script>
+</body>
+</html>
