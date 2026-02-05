@@ -1,0 +1,20 @@
+{
+  "name": "grabanyvideo",
+  "version": "3.0.0",
+  "description": "Real video downloader for ALL websites",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "postinstall": "apt-get update && apt-get install -y python3 ffmpeg && curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp && chmod a+rx /usr/local/bin/yt-dlp"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "axios": "^1.6.0",
+    "yt-dlp-exec": "^1.0.2",
+    "@distube/ytdl-core": "^4.16.2",
+    "cors": "^2.8.5"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}
